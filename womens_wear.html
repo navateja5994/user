@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Womens Wear User Page</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #background-video {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      z-index: -1;
+      object-fit: cover;
+    }
+    main {
+      position: relative;
+      z-index: 1;
+      padding: 2rem;
+      color: white;
+      text-shadow: 0 0 5px rgba(0,0,0,0.7);
+    }
+  </style>
+</head>
+<body>
+<video autoplay muted loop id="background-video">
+  <source src="video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background-color: #007bff; color: white;">
+    
+    <div class="title">Womens Wear</div>
+    
+    <nav>
+      <button id="backBtn" style="background-color: #6c757d; color: white; border-radius: 4px; padding: 0.5rem 1rem; border: none; cursor: pointer; margin-right: 1rem;">Back</button>
+      <button id="cartBtn" style="background-color: #ffc107; color: black; border-radius: 4px; padding: 0.5rem 1rem; border: none; cursor: pointer; margin-right: 1rem;">Cart</button>
+      <button id="logoutBtn" class="logout" style="background-color: #dc3545; color: white; border-radius: 4px; padding: 0.5rem 1rem; border: none; cursor: pointer;">Logout</button>
+    </nav>
+  </header>
+
+  <script>
+    document.getElementById('cartBtn').addEventListener('click', () => {
+      window.location.href = 'cart.html';
+    });
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = 'home.html';
+    });
+  </script>
+  <h2>Womens Wear Items</h2>
+  <div class="items-container" id="itemsContainer">
+    <p class="message" id="loadingMessage">Loading items...</p>
+  </div>
+
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <!-- Firebase Database -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+    apiKey: "AIzaSyD5GD827PZQOZdlUGqxKZE-phv5Muts_W0",
+    authDomain: "shopping-cc291.firebaseapp.com",
+    databaseURL: "https://shopping-cc291-default-rtdb.firebaseio.com",
+    projectId: "shopping-cc291",
+    storageBucket: "shopping-cc291.firebasestorage.app",
+    messagingSenderId: "591696399042",
+    appId: "1:591696399042:web:a883f0a933fedb8e6c895b",
+    measurementId: "G-0SZ8K9T62V"
+  };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const itemsContainer = document.getElementById('itemsContainer');
+    const loadingMessage = document.getElementById('loadingMessage');
+
+    function displayItems(items) {
+      itemsContainer.innerHTML = '';
+      if (!items) {
+        itemsContainer.innerHTML = '<p class="message">No items found.</p>';
+        return;
+      }
+      Object.keys(items).forEach(key => {
+        const item = items[key];
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'item';
+        itemDiv.innerHTML = `
+          <h3>${item.name}</h3>
+          <p>${item.description}</p>
+          ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}" style="max-width:100%; height:auto; margin-bottom: 0.5rem; border-radius: 4px;" />` : ''}
+          <p class="price">$${item.price.toFixed(2)}</p>
+          <div>
+            <button class="buy-btn" data-key="${key}">Buy</button>
+            <button class="cart-btn" data-key="${key}">Add to Cart</button>
+          </div>
+        `;
+        itemsContainer.appendChild(itemDiv);
+      });
+    }
+
+    // Fetch womens wear items from Firebase Realtime Database
+    database.ref('womens_wear').on('value', (snapshot) => {
+      const data = snapshot.val();
+      loadingMessage.style.display = 'none';
+      displayItems(data);
+
+      // Add event listeners for buy and cart buttons
+      setTimeout(() => {
+        document.querySelectorAll('.buy-btn').forEach(button => {
+          button.addEventListener('click', () => {
+            const key = button.getAttribute('data-key');
+            const item = data[key];
+            if (item) {
+              // Clear cart and add only this item for buy now
+              localStorage.setItem('shoppingCart', JSON.stringify([{...item, quantity: 1}]));
+              window.location.href = 'cart.html';
+            }
+          });
+        });
+        document.querySelectorAll('.cart-btn').forEach(button => {
+          button.addEventListener('click', () => {
+            const key = button.getAttribute('data-key');
+            const item = data[key];
+            if (item) {
+              let cart = localStorage.getItem('shoppingCart');
+              cart = cart ? JSON.parse(cart) : [];
+              const existingIndex = cart.findIndex(ci => ci.name === item.name);
+              if (existingIndex >= 0) {
+                cart[existingIndex].quantity += 1;
+              } else {
+                cart.push({...item, quantity: 1});
+              }
+              localStorage.setItem('shoppingCart', JSON.stringify(cart));
+              alert(`${item.name} added to cart.`);
+            }
+          });
+        });
+      }, 100);
+    }, (error) => {
+      loadingMessage.textContent = 'Error loading items: ' + error.message;
+    });
+
+    // Firebase Authentication for logout and navigation buttons
+    const auth = firebase.auth();
+
+    // Redirect to login if not logged in
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'login.html';
+      }
+    });
+
+    // Logout button
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      auth.signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    });
+  </script>
+</body>
+</html>
