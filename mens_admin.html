@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mens Admin Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 2rem;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    form {
+      max-width: 400px;
+      margin: 0 auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .message {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Mens Admin Page - Add Mens Wear Item</h2>
+  <form id="mensForm">
+    <input type="text" id="name" placeholder="Item Name" required />
+    <textarea id="description" placeholder="Description" rows="3" required></textarea>
+    <input type="number" id="price" placeholder="Price" required min="0" step="0.01" />
+    <input type="text" id="imageUrl" placeholder="Image URL" />
+    <button type="submit">Add Item</button>
+  </form>
+  <div class="message" id="message"></div>
+
+  <h3>Existing Items</h3>
+  <div id="itemsList"></div>
+
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <!-- Firebase Database -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <script>
+   const firebaseConfig = {
+    apiKey: "AIzaSyD5GD827PZQOZdlUGqxKZE-phv5Muts_W0",
+    authDomain: "shopping-cc291.firebaseapp.com",
+    databaseURL: "https://shopping-cc291-default-rtdb.firebaseio.com",
+    projectId: "shopping-cc291",
+    storageBucket: "shopping-cc291.firebasestorage.app",
+    messagingSenderId: "591696399042",
+    appId: "1:591696399042:web:a883f0a933fedb8e6c895b",
+    measurementId: "G-0SZ8K9T62V"
+  };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const mensForm = document.getElementById('mensForm');
+    const messageDiv = document.getElementById('message');
+    const itemsList = document.getElementById('itemsList');
+
+    mensForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const price = parseFloat(document.getElementById('price').value);
+      const imageUrl = document.getElementById('imageUrl').value.trim();
+
+      if (!name || !description || isNaN(price)) {
+        messageDiv.textContent = 'Please fill all fields correctly.';
+        messageDiv.style.color = 'red';
+        return;
+      }
+
+      saveItem(name, description, price, imageUrl || null);
+    });
+
+    function saveItem(name, description, price, imageUrl) {
+      const newItemRef = database.ref('mens_wear').push();
+      newItemRef.set({
+        name,
+        description,
+        price,
+        imageUrl: imageUrl || null
+      })
+      .then(() => {
+        messageDiv.textContent = 'Item added successfully!';
+        messageDiv.style.color = 'green';
+        mensForm.reset();
+      })
+      .catch((error) => {
+        messageDiv.textContent = 'Error adding item: ' + error.message;
+        messageDiv.style.color = 'red';
+      });
+    }
+
+    // Function to render items
+    function renderItems(items) {
+      itemsList.innerHTML = '';
+      for (const id in items) {
+        const item = items[id];
+        const itemDiv = document.createElement('div');
+        itemDiv.style.border = '1px solid #ccc';
+        itemDiv.style.padding = '10px';
+        itemDiv.style.marginBottom = '10px';
+        itemDiv.style.borderRadius = '4px';
+
+        const content = `
+          <strong>${item.name}</strong><br/>
+          ${item.description}<br/>
+          Price: $${item.price.toFixed(2)}<br/>
+          ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}" style="max-width:100px; max-height:100px;"/>` : ''}
+          <br/>
+          <button onclick="editItem('${id}', '${item.name}', '${item.description}', ${item.price}, '${item.imageUrl || ''}')">Edit</button>
+          <button onclick="deleteItem('${id}')">Delete</button>
+        `;
+        itemDiv.innerHTML = content;
+        itemsList.appendChild(itemDiv);
+      }
+    }
+
+    // Fetch and listen for changes in items
+    const itemsRef = database.ref('mens_wear');
+    itemsRef.on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      renderItems(data);
+    });
+
+    // Edit item function
+    function editItem(id, name, description, price, imageUrl) {
+      document.getElementById('name').value = name;
+      document.getElementById('description').value = description;
+      document.getElementById('price').value = price;
+      document.getElementById('imageUrl').value = imageUrl;
+
+      // Change form button to update mode
+      const addButton = mensForm.querySelector('button[type="submit"]');
+      addButton.textContent = 'Update Item';
+
+      // Remove previous event listener to avoid multiple triggers
+      mensForm.removeEventListener('submit', addItemListener);
+
+      // Add update event listener
+      mensForm.addEventListener('submit', function updateListener(e) {
+        e.preventDefault();
+        const updatedName = document.getElementById('name').value.trim();
+        const updatedDescription = document.getElementById('description').value.trim();
+        const updatedPrice = parseFloat(document.getElementById('price').value);
+        const updatedImageUrl = document.getElementById('imageUrl').value.trim();
+
+        if (!updatedName || !updatedDescription || isNaN(updatedPrice)) {
+          messageDiv.textContent = 'Please fill all fields correctly.';
+          messageDiv.style.color = 'red';
+          return;
+        }
+
+        database.ref('mens_wear/' + id).set({
+          name: updatedName,
+          description: updatedDescription,
+          price: updatedPrice,
+          imageUrl: updatedImageUrl || null
+        })
+        .then(() => {
+          messageDiv.textContent = 'Item updated successfully!';
+          messageDiv.style.color = 'green';
+          mensForm.reset();
+          addButton.textContent = 'Add Item';
+
+          // Remove this update listener and re-add the add listener
+          mensForm.removeEventListener('submit', updateListener);
+          mensForm.addEventListener('submit', addItemListener);
+        })
+        .catch((error) => {
+          messageDiv.textContent = 'Error updating item: ' + error.message;
+          messageDiv.style.color = 'red';
+        });
+      });
+    }
+
+    // Delete item function
+    function deleteItem(id) {
+      if (confirm('Are you sure you want to delete this item?')) {
+        database.ref('mens_wear/' + id).remove()
+        .then(() => {
+          messageDiv.textContent = 'Item deleted successfully!';
+          messageDiv.style.color = 'green';
+        })
+        .catch((error) => {
+          messageDiv.textContent = 'Error deleting item: ' + error.message;
+          messageDiv.style.color = 'red';
+        });
+      }
+    }
+
+    // Initially set the add item listener
+    mensForm.removeEventListener('submit', addItemListener);
+    mensForm.addEventListener('submit', addItemListener);
+  </script>
+</body>
+</html>

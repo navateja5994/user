@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Signup</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="signup-container">
+    <h2>Admin Signup</h2>
+    <div id="error-message" class="error-message"></div>
+    <div id="success-message" class="success-message"></div>
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button id="signup-btn">Sign Up</button>
+  </div>
+
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <!-- Firebase Authentication -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+  <script>
+    // TODO: Replace the following with your app's Firebase project configuration
+   const firebaseConfig = {
+    apiKey: "AIzaSyD5GD827PZQOZdlUGqxKZE-phv5Muts_W0",
+    authDomain: "shopping-cc291.firebaseapp.com",
+    databaseURL: "https://shopping-cc291-default-rtdb.firebaseio.com",
+    projectId: "shopping-cc291",
+    storageBucket: "shopping-cc291.firebasestorage.app",
+    messagingSenderId: "591696399042",
+    appId: "1:591696399042:web:a883f0a933fedb8e6c895b",
+    measurementId: "G-0SZ8K9T62V"
+  };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const signupBtn = document.getElementById('signup-btn');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+
+    signupBtn.addEventListener('click', () => {
+      errorMessage.textContent = '';
+      successMessage.textContent = '';
+      const email = emailInput.value;
+      const password = passwordInput.value;
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          successMessage.textContent = 'Signup successful! Redirecting to login...';
+          emailInput.value = '';
+          passwordInput.value = '';
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 1500);
+        })
+        .catch((error) => {
+          errorMessage.textContent = error.message;
+        });
+    });
+  </script>
+</body>
+</html>
